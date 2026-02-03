@@ -1,10 +1,27 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { AppView, NavigationProps, AppSettings } from '../types';
-import { StorageService } from '../utils/storage';
+import { StorageService, DEFAULT_SETTINGS } from '../utils/storage';
+import { Icon } from '../components/Icon';
 
 export const ThemeSettingsScreen: React.FC<NavigationProps> = ({ navigate }) => {
-  const [settings, setSettings] = useState<AppSettings>(StorageService.getSettings());
+  const [settings, setSettings] = useState<AppSettings>(DEFAULT_SETTINGS);
+
+  useEffect(() => {
+    const loadSettings = async () => {
+      const data = await StorageService.getSettings();
+      setSettings(data);
+    };
+    void loadSettings();
+    const handleSync = (event: Event) => {
+      const key = (event as CustomEvent).detail?.key;
+      if (!key || key === 'settings') {
+        void loadSettings();
+      }
+    };
+    window.addEventListener('storage-sync', handleSync);
+    return () => window.removeEventListener('storage-sync', handleSync);
+  }, []);
 
   const setTheme = (theme: AppSettings['theme']) => {
     const newSettings = { ...settings, theme };
@@ -27,9 +44,9 @@ export const ThemeSettingsScreen: React.FC<NavigationProps> = ({ navigate }) => 
 
   return (
     <div className="bg-[#fcfcfc] dark:bg-slate-900 min-h-screen pb-20 font-sans transition-colors duration-500">
-      <header className="sticky top-0 z-50 bg-white/90 dark:bg-slate-900/90 backdrop-blur-md px-6 pt-12 pb-4 border-b border-gray-100 dark:border-gray-800 flex items-center">
+      <header className="sticky top-0 z-50 bg-white/90 dark:bg-slate-900/90 backdrop-blur-md px-6 pt-safe pb-4 border-b border-gray-100 dark:border-gray-800 flex items-center">
         <button onClick={() => navigate(AppView.PROFILE)} className="mr-4 text-slate-400 dark:text-slate-500">
-          <span className="material-symbols-rounded">arrow_back</span>
+          <Icon name="arrow_back" />
         </button>
         <h1 className="text-xl font-bold text-slate-800 dark:text-white">界面主题</h1>
       </header>
@@ -101,7 +118,7 @@ const ThemeCard = ({ label, active, onSelect, previewClass }: any) => (
     <div className={`w-full aspect-square rounded-2xl shadow-inner ${previewClass}`}></div>
     <div className="flex items-center justify-between px-1 w-full">
       <span className={`text-[10px] font-black uppercase tracking-wider ${active ? 'text-primary' : 'text-slate-400'}`}>{label}</span>
-      {active && <span className="material-symbols-rounded text-primary text-[14px] font-variation-filled">check_circle</span>}
+      {active && <Icon name="check_circle" className="text-primary text-[14px]" />}
     </div>
   </button>
 );

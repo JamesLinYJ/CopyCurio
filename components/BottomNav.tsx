@@ -1,5 +1,6 @@
 
 import React from 'react';
+import { Icon } from './Icon';
 import { AppView } from '../types';
 
 interface BottomNavProps {
@@ -60,9 +61,7 @@ const NavButton = ({ active, onClick, icon, color, bgColor }: any) => (
     className={`w-14 h-14 rounded-full flex items-center justify-center transition-all duration-300 active:scale-90
       ${active ? `${bgColor} ${color} shadow-sm scale-110` : 'text-gray-300 hover:text-gray-400'}`}
   >
-    <span className={`material-symbols-rounded text-[32px] ${active ? 'animate-pop-in' : ''}`}>
-      {icon}
-    </span>
+    <Icon name={icon} className={`text-[32px] ${active ? 'animate-pop-in' : ''}`} />
     {active && <span className="absolute -bottom-1 w-1.5 h-1.5 rounded-full bg-current"></span>}
   </button>
 );

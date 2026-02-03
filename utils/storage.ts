@@ -1,82 +1,16 @@
-
 import { LibraryItem, UserStats, ChatMessage, ChatSession, AppSettings } from '../types';
-import { ASSETS } from '../assets';
 
-const KEYS = {
-  STATS: 'wanxiang_stats',
-  SETTINGS: 'wanxiang_settings'
+const DEVICE_KEY = 'wanxiang_device_id';
+const API_BASE = import.meta.env.VITE_API_BASE_URL || '';
+
+const CACHE_KEYS = {
+  SETTINGS: 'wanxiang_cache_settings',
+  STATS: 'wanxiang_cache_stats',
+  LIBRARY: 'wanxiang_cache_library',
+  SESSIONS: 'wanxiang_cache_sessions'
 };
 
-const DB_NAME = 'CurioDB';
-const DB_VERSION = 1;
-const STORE_LIBRARY = 'library';
-const STORE_SESSIONS = 'sessions';
-
-// IndexedDB Helper
-const idb = {
-  open: (): Promise<IDBDatabase> => {
-    return new Promise((resolve, reject) => {
-      const request = indexedDB.open(DB_NAME, DB_VERSION);
-      request.onupgradeneeded = (e) => {
-        const db = (e.target as IDBOpenDBRequest).result;
-        if (!db.objectStoreNames.contains(STORE_LIBRARY)) {
-          db.createObjectStore(STORE_LIBRARY, { keyPath: 'id' });
-        }
-        if (!db.objectStoreNames.contains(STORE_SESSIONS)) {
-          db.createObjectStore(STORE_SESSIONS, { keyPath: 'id' });
-        }
-      };
-      request.onsuccess = () => resolve(request.result);
-      request.onerror = () => reject(request.error);
-    });
-  },
-  getAll: <T>(storeName: string): Promise<T[]> => {
-    return idb.open().then(db => {
-      return new Promise<T[]>((resolve, reject) => {
-        const tx = db.transaction(storeName, 'readonly');
-        const store = tx.objectStore(storeName);
-        const request = store.getAll();
-        request.onsuccess = () => resolve(request.result as T[]);
-        request.onerror = () => reject(request.error);
-      });
-    });
-  },
-  put: (storeName: string, item: any): Promise<void> => {
-    return idb.open().then(db => {
-      return new Promise((resolve, reject) => {
-        const tx = db.transaction(storeName, 'readwrite');
-        const store = tx.objectStore(storeName);
-        const request = store.put(item);
-        request.onsuccess = () => resolve();
-        request.onerror = () => reject(request.error);
-      });
-    });
-  },
-  delete: (storeName: string, id: string): Promise<void> => {
-    return idb.open().then(db => {
-      return new Promise((resolve, reject) => {
-        const tx = db.transaction(storeName, 'readwrite');
-        const store = tx.objectStore(storeName);
-        const request = store.delete(id);
-        request.onsuccess = () => resolve();
-        request.onerror = () => reject(request.error);
-      });
-    });
-  },
-  clear: (storeName: string): Promise<void> => {
-     return idb.open().then(db => {
-      return new Promise((resolve, reject) => {
-        const tx = db.transaction(storeName, 'readwrite');
-        const store = tx.objectStore(storeName);
-        const request = store.clear();
-        request.onsuccess = () => resolve();
-        request.onerror = () => reject(request.error);
-      });
-    });
-  }
-};
-
-const DEFAULT_STATS: UserStats = {
+export const DEFAULT_STATS: UserStats = {
   itemsSaved: 0,
   daysActive: 1,
   lastLogin: Date.now(),
@@ -84,7 +18,7 @@ const DEFAULT_STATS: UserStats = {
   xp: 0
 };
 
-const DEFAULT_SETTINGS: AppSettings = {
+export const DEFAULT_SETTINGS: AppSettings = {
   theme: 'system',
   notifications: {
     dailyFact: true,
@@ -100,162 +34,320 @@ const DEFAULT_SETTINGS: AppSettings = {
   }
 };
 
+const getDeviceId = () => {
+  let id = localStorage.getItem(DEVICE_KEY);
+  if (!id) {
+    if (typeof crypto !== 'undefined' && 'randomUUID' in crypto) {
+      id = crypto.randomUUID();
+    } else {
+      id = `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+    }
+    localStorage.setItem(DEVICE_KEY, id);
+  }
+  return id;
+};
+
+const resolveUrl = (path: string) => (API_BASE ? `${API_BASE}${path}` : path);
+
+const readCache = <T>(key: string, fallback: T): { value: T; hasCache: boolean } => {
+  const raw = localStorage.getItem(key);
+  if (!raw) return { value: fallback, hasCache: false };
+  try {
+    return { value: JSON.parse(raw) as T, hasCache: true };
+  } catch (e) {
+    return { value: fallback, hasCache: false };
+  }
+};
+
+const writeCache = (key: string, value: unknown) => {
+  try {
+    localStorage.setItem(key, JSON.stringify(value));
+  } catch (e) {
+    // Ignore quota errors
+  }
+};
+
+const emitSync = (key: string) => {
+  window.dispatchEvent(new CustomEvent('storage-sync', { detail: { key } }));
+  // Reuse existing listeners that watch 'storage'
+  window.dispatchEvent(new Event('storage'));
+};
+
+const apiFetch = async <T>(path: string, options: RequestInit = {}): Promise<T> => {
+  const headers: Record<string, string> = {
+    'Content-Type': 'application/json',
+    'x-device-id': getDeviceId(),
+    ...(options.headers as Record<string, string> | undefined)
+  };
+
+  const response = await fetch(resolveUrl(path), {
+    ...options,
+    headers
+  });
+
+  if (!response.ok) {
+    const text = await response.text();
+    throw new Error(`API error (${response.status}): ${text}`);
+  }
+
+  return response.json() as Promise<T>;
+};
+
+const mergeSettings = (settings: AppSettings) => {
+  return { ...DEFAULT_SETTINGS, ...settings, accessibility: { ...DEFAULT_SETTINGS.accessibility, ...settings.accessibility } };
+};
+
+const updateCachedStatsItems = (libraryCount: number) => {
+  const { value: cachedStats, hasCache } = readCache<UserStats>(CACHE_KEYS.STATS, DEFAULT_STATS);
+  if (!hasCache) return;
+  const next = { ...cachedStats, itemsSaved: libraryCount };
+  writeCache(CACHE_KEYS.STATS, next);
+  emitSync('stats');
+};
+
+const refreshSettings = async (): Promise<AppSettings> => {
+  const data = await apiFetch<{ settings: AppSettings }>('/api/settings');
+  const merged = mergeSettings(data.settings);
+  writeCache(CACHE_KEYS.SETTINGS, merged);
+  emitSync('settings');
+  return merged;
+};
+
+const refreshStats = async (): Promise<UserStats> => {
+  const data = await apiFetch<{ stats: UserStats }>('/api/stats');
+  writeCache(CACHE_KEYS.STATS, data.stats);
+  emitSync('stats');
+  return data.stats;
+};
+
+const refreshLibrary = async (): Promise<LibraryItem[]> => {
+  const data = await apiFetch<{ items: LibraryItem[] }>('/api/library');
+  writeCache(CACHE_KEYS.LIBRARY, data.items);
+  emitSync('library');
+  updateCachedStatsItems(data.items.length);
+  return data.items;
+};
+
+const refreshSessions = async (): Promise<ChatSession[]> => {
+  const data = await apiFetch<{ sessions: ChatSession[] }>('/api/sessions');
+  writeCache(CACHE_KEYS.SESSIONS, data.sessions);
+  emitSync('sessions');
+  return data.sessions;
+};
+
 export const StorageService = {
-  safeParse: <T>(jsonString: string | null, fallback: T): T => {
-    if (!jsonString) return fallback;
+  // --- Stats & Settings ---
+
+  getStats: async (): Promise<UserStats> => {
+    const cached = readCache<UserStats>(CACHE_KEYS.STATS, DEFAULT_STATS);
+    if (cached.hasCache) {
+      void refreshStats();
+      return cached.value;
+    }
     try {
-      return JSON.parse(jsonString) as T;
+      return await refreshStats();
     } catch (e) {
-      return fallback;
+      return DEFAULT_STATS;
     }
   },
 
-  // --- Synchronous (LocalStorage) for Stats & Settings ---
+  addXp: async (amount: number) => {
+    const cached = readCache<UserStats>(CACHE_KEYS.STATS, DEFAULT_STATS);
+    const optimistic = { ...cached.value, xp: (cached.value.xp || 0) + amount };
+    writeCache(CACHE_KEYS.STATS, optimistic);
+    emitSync('stats');
 
-  getStats: (): UserStats => {
-    const stats = StorageService.safeParse(localStorage.getItem(KEYS.STATS), DEFAULT_STATS);
-    const lastDate = new Date(stats.lastLogin).toDateString();
-    const today = new Date().toDateString();
-    if (lastDate !== today) {
-      stats.daysActive += 1;
-      stats.lastLogin = Date.now();
-      localStorage.setItem(KEYS.STATS, JSON.stringify(stats));
+    try {
+      const data = await apiFetch<{ stats: UserStats }>('/api/stats/xp', {
+        method: 'POST',
+        body: JSON.stringify({ amount })
+      });
+      writeCache(CACHE_KEYS.STATS, data.stats);
+      emitSync('stats');
+    } catch (e) {
+      // Ignore XP failures to avoid blocking UI
     }
-    return stats;
   },
 
-  addXp: (amount: number) => {
-    const stats = StorageService.getStats();
-    stats.xp = (stats.xp || 0) + amount;
-    localStorage.setItem(KEYS.STATS, JSON.stringify(stats));
+  getSettings: async (): Promise<AppSettings> => {
+    const cached = readCache<AppSettings>(CACHE_KEYS.SETTINGS, DEFAULT_SETTINGS);
+    if (cached.hasCache) {
+      void refreshSettings();
+      return mergeSettings(cached.value);
+    }
+
+    try {
+      return await refreshSettings();
+    } catch (e) {
+      return DEFAULT_SETTINGS;
+    }
   },
 
-  getSettings: (): AppSettings => {
-    const stored = localStorage.getItem(KEYS.SETTINGS);
-    const parsed = StorageService.safeParse(stored, DEFAULT_SETTINGS);
-    return { ...DEFAULT_SETTINGS, ...parsed, accessibility: { ...DEFAULT_SETTINGS.accessibility, ...parsed.accessibility } };
+  saveSettings: async (settings: AppSettings) => {
+    const merged = mergeSettings(settings);
+    writeCache(CACHE_KEYS.SETTINGS, merged);
+    emitSync('settings');
+
+    try {
+      await apiFetch('/api/settings', {
+        method: 'PUT',
+        body: JSON.stringify({ settings: merged })
+      });
+    } catch (e) {
+      // Allow offline/local changes; sync will retry on next load
+    }
   },
 
-  saveSettings: (settings: AppSettings) => {
-    localStorage.setItem(KEYS.SETTINGS, JSON.stringify(settings));
-  },
-
-  // --- Asynchronous (IndexedDB) for Heavy Data ---
+  // --- Library ---
 
   getLibrary: async (): Promise<LibraryItem[]> => {
-    return (await idb.getAll<LibraryItem>(STORE_LIBRARY)).sort((a, b) => b.date - a.date);
+    const cached = readCache<LibraryItem[]>(CACHE_KEYS.LIBRARY, []);
+    if (cached.hasCache) {
+      void refreshLibrary();
+      return cached.value;
+    }
+    try {
+      return await refreshLibrary();
+    } catch (e) {
+      return [];
+    }
   },
 
   saveToLibrary: async (item: Omit<LibraryItem, 'id' | 'date'>) => {
-    const newItem: LibraryItem = {
-      ...item,
-      id: Date.now().toString() + Math.random().toString(36).substr(2, 9),
-      date: Date.now()
-    };
-    await idb.put(STORE_LIBRARY, newItem);
-    
-    // Update count in stats
-    const items = await idb.getAll(STORE_LIBRARY);
-    const stats = StorageService.getStats();
-    stats.itemsSaved = items.length;
-    localStorage.setItem(KEYS.STATS, JSON.stringify(stats));
-    return newItem;
+    const data = await apiFetch<{ item: LibraryItem }>('/api/library', {
+      method: 'POST',
+      body: JSON.stringify({ item })
+    });
+
+    const cached = readCache<LibraryItem[]>(CACHE_KEYS.LIBRARY, []);
+    const next = [data.item, ...cached.value.filter((entry) => entry.id !== data.item.id)];
+    writeCache(CACHE_KEYS.LIBRARY, next);
+    emitSync('library');
+    updateCachedStatsItems(next.length);
+
+    return data.item;
   },
 
   deleteFromLibrary: async (id: string) => {
-    await idb.delete(STORE_LIBRARY, id);
-    
-    const items = await idb.getAll<LibraryItem>(STORE_LIBRARY);
-    const stats = StorageService.getStats();
-    stats.itemsSaved = items.length;
-    localStorage.setItem(KEYS.STATS, JSON.stringify(stats));
-    return items; // Return updated list
+    const data = await apiFetch<{ items: LibraryItem[] }>(`/api/library/${id}`, {
+      method: 'DELETE'
+    });
+    writeCache(CACHE_KEYS.LIBRARY, data.items);
+    emitSync('library');
+    updateCachedStatsItems(data.items.length);
+    return data.items;
   },
 
+  // --- Sessions ---
+
   getSessions: async (): Promise<ChatSession[]> => {
-    return (await idb.getAll<ChatSession>(STORE_SESSIONS)).sort((a, b) => b.updatedAt - a.updatedAt);
+    const cached = readCache<ChatSession[]>(CACHE_KEYS.SESSIONS, []);
+    if (cached.hasCache) {
+      void refreshSessions();
+      return cached.value;
+    }
+    try {
+      return await refreshSessions();
+    } catch (e) {
+      return [];
+    }
   },
 
   createSession: async (firstMessageText: string): Promise<ChatSession> => {
-    const title = firstMessageText.slice(0, 15) + (firstMessageText.length > 15 ? '...' : '');
-    const newSession: ChatSession = {
-      id: Date.now().toString(),
-      title: title,
-      preview: title,
-      updatedAt: Date.now(),
-      messages: []
-    };
-    await idb.put(STORE_SESSIONS, newSession);
-    return newSession;
+    const data = await apiFetch<{ session: ChatSession }>('/api/sessions', {
+      method: 'POST',
+      body: JSON.stringify({ firstMessageText })
+    });
+    const cached = readCache<ChatSession[]>(CACHE_KEYS.SESSIONS, []);
+    const next = [data.session, ...cached.value.filter((entry) => entry.id !== data.session.id)];
+    writeCache(CACHE_KEYS.SESSIONS, next);
+    emitSync('sessions');
+    return data.session;
   },
 
   updateSession: async (sessionId: string, newMessages: ChatMessage[]) => {
-    const sessions = await StorageService.getSessions();
-    const session = sessions.find(s => s.id === sessionId);
-    if (session) {
-      session.messages = newMessages.slice(-100);
-      session.updatedAt = Date.now();
+    await apiFetch(`/api/sessions/${sessionId}`, {
+      method: 'PUT',
+      body: JSON.stringify({ messages: newMessages })
+    });
+
+    const cached = readCache<ChatSession[]>(CACHE_KEYS.SESSIONS, []);
+    if (cached.value.length > 0) {
+      const updatedAt = Date.now();
       const lastMsg = newMessages[newMessages.length - 1];
-      if (lastMsg) session.preview = lastMsg.text.slice(0, 30) + "...";
-      await idb.put(STORE_SESSIONS, session);
+      const preview = lastMsg ? String(lastMsg.text || '').slice(0, 30) + '...' : '';
+      const updated = cached.value.map((session) =>
+        session.id === sessionId
+          ? { ...session, messages: newMessages.slice(-100), updatedAt, preview }
+          : session
+      );
+      const reordered = updated.sort((a, b) => b.updatedAt - a.updatedAt);
+      writeCache(CACHE_KEYS.SESSIONS, reordered);
+      emitSync('sessions');
     }
   },
 
   deleteSession: async (sessionId: string) => {
-    await idb.delete(STORE_SESSIONS, sessionId);
-    return await StorageService.getSessions();
+    const data = await apiFetch<{ sessions: ChatSession[] }>(`/api/sessions/${sessionId}`, {
+      method: 'DELETE'
+    });
+    writeCache(CACHE_KEYS.SESSIONS, data.sessions);
+    emitSync('sessions');
+    return data.sessions;
   },
 
   clearSessions: async () => {
-    await idb.clear(STORE_SESSIONS);
+    await apiFetch('/api/sessions', { method: 'DELETE' });
+    writeCache(CACHE_KEYS.SESSIONS, []);
+    emitSync('sessions');
   },
 
+  // --- Storage Tools ---
+
   optimizeImages: async () => {
-    const library = await StorageService.getLibrary();
-    const optimized = library.map(item => ({
-      ...item,
-      thumbnail: item.thumbnail?.startsWith('data:image') ? ASSETS.thumb_cat : item.thumbnail
-    }));
-    // Bulk put (simplified loop)
-    for (const item of optimized) {
-      await idb.put(STORE_LIBRARY, item);
+    await apiFetch('/api/library/optimize-images', { method: 'POST' });
+    const cached = readCache<LibraryItem[]>(CACHE_KEYS.LIBRARY, []);
+    if (cached.value.length > 0) {
+      const next = cached.value.map((item) => ({
+        ...item,
+        thumbnail: item.thumbnail?.startsWith('data:image') ? undefined : item.thumbnail
+      }));
+      writeCache(CACHE_KEYS.LIBRARY, next);
+      emitSync('library');
     }
   },
 
   getStorageBreakdown: async () => {
-    const statsRaw = localStorage.getItem(KEYS.STATS) || '';
-    
-    let libraryCount = 0;
-    let librarySize = "0.0";
-    let sessionsCount = 0;
-    let sessionsSize = "0.0";
-    
     try {
-        const libItems = await idb.getAll<LibraryItem>(STORE_LIBRARY);
-        libraryCount = libItems.length;
-        librarySize = (new Blob([JSON.stringify(libItems)]).size / 1024).toFixed(1);
-
-        const sessItems = await idb.getAll<ChatSession>(STORE_SESSIONS);
-        sessionsCount = sessItems.length;
-        sessionsSize = (new Blob([JSON.stringify(sessItems)]).size / 1024).toFixed(1);
+      const data = await apiFetch<{ breakdown: { librarySize: string; libraryCount: number; sessionsSize: string; sessionsCount: number; systemSize: string; totalSize: string } }>('/api/storage/breakdown');
+      return data.breakdown;
     } catch (e) {
-        console.warn("Failed to measure IDB size");
+      const library = readCache<LibraryItem[]>(CACHE_KEYS.LIBRARY, []).value;
+      const sessions = readCache<ChatSession[]>(CACHE_KEYS.SESSIONS, []).value;
+      const settingsRaw = localStorage.getItem(CACHE_KEYS.SETTINGS) || '';
+      const statsRaw = localStorage.getItem(CACHE_KEYS.STATS) || '';
+      const toKb = (value: number) => (value / 1024).toFixed(1);
+      const librarySize = toKb(new Blob([JSON.stringify(library)]).size);
+      const sessionsSize = toKb(new Blob([JSON.stringify(sessions)]).size);
+      const systemSize = toKb(new Blob([settingsRaw + statsRaw]).size);
+      const totalSize = toKb(new Blob([JSON.stringify(library) + JSON.stringify(sessions) + settingsRaw + statsRaw]).size);
+      return {
+        librarySize,
+        libraryCount: library.length,
+        sessionsSize,
+        sessionsCount: sessions.length,
+        systemSize,
+        totalSize
+      };
     }
-
-    return {
-      librarySize,
-      libraryCount,
-      sessionsSize,
-      sessionsCount,
-      systemSize: (new Blob([statsRaw]).size / 1024).toFixed(1),
-      totalSize: (new Blob([Object.values(localStorage).join('')]).size / 1024).toFixed(1)
-    };
   },
 
   clearAllData: async () => {
-    localStorage.clear();
-    await idb.clear(STORE_LIBRARY);
-    await idb.clear(STORE_SESSIONS);
+    await apiFetch('/api/all', { method: 'DELETE' });
+    localStorage.removeItem(CACHE_KEYS.LIBRARY);
+    localStorage.removeItem(CACHE_KEYS.SESSIONS);
+    localStorage.removeItem(CACHE_KEYS.STATS);
+    localStorage.removeItem(CACHE_KEYS.SETTINGS);
     window.location.reload();
   }
 };

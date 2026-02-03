@@ -2,6 +2,7 @@
 import React from 'react';
 import { AppView, NavigationProps } from '../types';
 import { ASSETS } from '../assets';
+import { Icon } from '../components/Icon';
 
 export const HomeScreen: React.FC<NavigationProps> = ({ navigate }) => {
   const hour = new Date().getHours();
@@ -10,7 +11,7 @@ export const HomeScreen: React.FC<NavigationProps> = ({ navigate }) => {
   return (
     <div className="min-h-[100dvh] w-full pb-32 font-sans overflow-x-hidden">
       {/* Playful Header */}
-      <header className="sticky top-0 z-30 bg-cream/90 backdrop-blur-xl px-6 pt-12 pb-4 flex justify-between items-center border-b-4 border-dashed border-primary/20">
+      <header className="sticky top-0 z-30 bg-cream/90 backdrop-blur-xl px-6 pt-safe pb-4 flex justify-between items-center border-b-4 border-dashed border-primary/20">
         <div>
           <div className="flex items-center gap-2 mb-1">
              <span className="text-2xl animate-wiggle">👋</span>
@@ -41,7 +42,7 @@ export const HomeScreen: React.FC<NavigationProps> = ({ navigate }) => {
                </div>
                <h2 className="text-3xl font-display font-black text-white leading-tight mb-2 drop-shadow-md">问问<br/>机器猫 Q-Bot</h2>
                <div className="mt-6 inline-flex items-center gap-2 bg-white text-secondary px-6 py-3 rounded-2xl font-black shadow-lg">
-                  <span className="material-symbols-rounded font-bold">chat_bubble</span>
+                  <Icon name="chat_bubble" className="font-bold" />
                   开始聊天
                </div>
             </div>
@@ -63,14 +64,14 @@ export const HomeScreen: React.FC<NavigationProps> = ({ navigate }) => {
              className="bg-primary rounded-[2rem] p-5 shadow-comic active:translate-y-1 active:shadow-comic-hover transition-all relative overflow-hidden h-44 flex flex-col justify-between group"
            >
               <div className="w-12 h-12 bg-white/20 rounded-2xl flex items-center justify-center border-2 border-white/30">
-                 <span className="material-symbols-rounded text-white text-3xl">view_in_ar</span>
+                 <Icon name="view_in_ar" className="text-white text-3xl" />
               </div>
               <div>
                  <h3 className="text-xl font-display font-black text-white">魔法<br/>照相机</h3>
                  <p className="text-white/80 text-xs font-bold mt-1">拍一拍，全知道!</p>
               </div>
               <div className="absolute -right-4 -top-4 text-white/10 rotate-12 group-hover:rotate-45 transition-transform duration-500">
-                 <span className="material-symbols-rounded text-[100px]">shutter_speed</span>
+                 <Icon name="shutter_speed" className="text-[100px]" />
               </div>
            </div>
 
@@ -80,14 +81,14 @@ export const HomeScreen: React.FC<NavigationProps> = ({ navigate }) => {
              className="bg-accent rounded-[2rem] p-5 shadow-comic active:translate-y-1 active:shadow-comic-hover transition-all relative overflow-hidden h-44 flex flex-col justify-between group"
            >
               <div className="w-12 h-12 bg-white/30 rounded-2xl flex items-center justify-center border-2 border-white/40">
-                 <span className="material-symbols-rounded text-yellow-800 text-3xl">lightbulb</span>
+                 <Icon name="lightbulb" className="text-yellow-800 text-3xl" />
               </div>
               <div>
                  <h3 className="text-xl font-display font-black text-yellow-900">今日<br/>小知识</h3>
                  <p className="text-yellow-800/80 text-xs font-bold mt-1">那是真的吗?</p>
               </div>
               <div className="absolute -right-4 -bottom-4 text-yellow-900/10 -rotate-12 group-hover:scale-110 transition-transform">
-                 <span className="material-symbols-rounded text-[90px]">school</span>
+                 <Icon name="school" className="text-[90px]" />
               </div>
            </div>
         </div>
@@ -106,7 +107,15 @@ export const HomeScreen: React.FC<NavigationProps> = ({ navigate }) => {
                     去探索
                  </div>
               </div>
-              <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/stardust.png')] opacity-30"></div>
+              <div
+                className="absolute inset-0 opacity-30"
+                style={{
+                  backgroundImage:
+                    'radial-gradient(circle at 20% 30%, rgba(255,255,255,0.5) 1px, transparent 1px), radial-gradient(circle at 80% 20%, rgba(255,255,255,0.35) 1px, transparent 1px), radial-gradient(circle at 40% 70%, rgba(255,255,255,0.4) 1px, transparent 1px)',
+                  backgroundSize: '28px 28px',
+                  backgroundPosition: '0 0, 12px 12px, 6px 18px'
+                }}
+              ></div>
            </div>
         </div>
 

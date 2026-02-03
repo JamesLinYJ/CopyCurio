@@ -1,16 +1,30 @@
 
 import React, { useState, useEffect } from 'react';
 import { AppView, NavigationProps, AppSettings } from '../types';
-import { StorageService } from '../utils/storage';
+import { StorageService, DEFAULT_SETTINGS } from '../utils/storage';
+import { Icon } from '../components/Icon';
 
 export const NotificationSettingsScreen: React.FC<NavigationProps> = ({ navigate }) => {
-  const [settings, setSettings] = useState<AppSettings>(StorageService.getSettings());
+  const [settings, setSettings] = useState<AppSettings>(DEFAULT_SETTINGS);
   const [permissionStatus, setPermissionStatus] = useState<NotificationPermission>('default');
 
   useEffect(() => {
+    const loadSettings = async () => {
+      const data = await StorageService.getSettings();
+      setSettings(data);
+    };
+    void loadSettings();
     if ('Notification' in window) {
       setPermissionStatus(Notification.permission);
     }
+    const handleSync = (event: Event) => {
+      const key = (event as CustomEvent).detail?.key;
+      if (!key || key === 'settings') {
+        void loadSettings();
+      }
+    };
+    window.addEventListener('storage-sync', handleSync);
+    return () => window.removeEventListener('storage-sync', handleSync);
   }, []);
 
   const requestPermission = async () => {
@@ -42,16 +56,16 @@ export const NotificationSettingsScreen: React.FC<NavigationProps> = ({ navigate
 
   return (
     <div className="bg-[#fcfcfc] min-h-screen pb-20 font-sans">
-      <header className="sticky top-0 z-50 bg-white/90 backdrop-blur-md px-6 pt-12 pb-4 border-b border-gray-100 flex items-center">
+      <header className="sticky top-0 z-50 bg-white/90 backdrop-blur-md px-6 pt-safe pb-4 border-b border-gray-100 flex items-center">
         <button onClick={() => navigate(AppView.PROFILE)} className="mr-4 text-slate-400 active:text-slate-600">
-          <span className="material-symbols-rounded">arrow_back</span>
+          <Icon name="arrow_back" />
         </button>
         <h1 className="text-xl font-bold text-slate-800">消息提醒</h1>
       </header>
       <main className="p-6">
         {permissionStatus === 'denied' && (
           <div className="bg-red-50 text-red-600 p-4 rounded-2xl text-xs font-bold mb-6 flex items-center gap-2">
-            <span className="material-symbols-rounded text-sm">error</span>
+            <Icon name="error" className="text-sm" />
             通知权限受限，请在系统设置中开启。
           </div>
         )}
@@ -79,7 +93,7 @@ export const NotificationSettingsScreen: React.FC<NavigationProps> = ({ navigate
 
         <div className="mt-8 p-6 bg-gray-50 rounded-2xl border border-gray-100">
            <div className="flex justify-center mb-4 opacity-50">
-              <span className="material-symbols-rounded text-4xl text-slate-300">notifications_off</span>
+              <Icon name="notifications_off" className="text-4xl text-slate-300" />
            </div>
            <p className="text-[10px] text-slate-400 leading-relaxed text-center">
              我们会严格控制推送频率。即使开启所有选项，我们承诺每天最多发送 1-2 条通知，以免打扰您的专注。

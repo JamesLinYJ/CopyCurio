@@ -1,94 +1,11 @@
-
 <!DOCTYPE html>
 <html lang="zh-CN">
   <head>
     <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="theme-color" content="#FFF9F0" />
     <title>奇妙万象 - 孩子的探索乐园</title>
-    <!-- Tailwind CSS -->
-    <script src="https://cdn.tailwindcss.com"></script>
-    <!-- Google Fonts & Icons -->
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&family=Varela+Round&family=Noto+Sans+SC:wght@400;500;700;900&display=swap" rel="stylesheet">
-    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet" />
-    
-    <script>
-      tailwind.config = {
-        darkMode: 'class',
-        theme: {
-          extend: {
-            colors: {
-              primary: "#FF6B6B",      // Coral Red
-              secondary: "#4ECDC4",    // Turquoise
-              accent: "#FFE66D",       // Sunshine Yellow
-              ink: "#2D3436",          // Soft Black
-              blueberry: "#5F27CD",    // Deep Purple
-              grass: "#6AB04C",        // Nature Green
-              cream: "#FFF9F0",        // Warm Background
-              bubble: "#F7F1E3"        // Off-white elements
-            },
-            fontFamily: {
-              display: ['Varela Round', 'Nunito', 'sans-serif'],
-              sans: ['Nunito', 'Noto Sans SC', 'sans-serif'],
-            },
-            animation: {
-              'bounce-slow': 'bounce 3s infinite',
-              'wiggle': 'wiggle 1s ease-in-out infinite',
-              'pop-in': 'popIn 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards',
-              'float': 'float 6s ease-in-out infinite',
-            },
-            keyframes: {
-              wiggle: {
-                '0%, 100%': { transform: 'rotate(-3deg)' },
-                '50%': { transform: 'rotate(3deg)' },
-              },
-              popIn: {
-                '0%': { opacity: '0', transform: 'scale(0.5)' },
-                '100%': { opacity: '1', transform: 'scale(1)' }
-              },
-              float: {
-                '0%, 100%': { transform: 'translateY(0)' },
-                '50%': { transform: 'translateY(-10px)' }
-              }
-            },
-            boxShadow: {
-              'comic': '0 4px 0 0 rgba(0,0,0,0.15)',
-              'comic-hover': '0 2px 0 0 rgba(0,0,0,0.15)',
-              'glow': '0 0 15px rgba(255, 230, 109, 0.6)',
-            }
-          }
-        }
-      }
-    </script>
-    <style>
-      .scrollbar-hide::-webkit-scrollbar { display: none; }
-      body { 
-        -webkit-tap-highlight-color: transparent; 
-        overscroll-behavior-y: none;
-        background-image: radial-gradient(#FFE66D 1.5px, transparent 1.5px), radial-gradient(#FF6B6B 1.5px, #FFF9F0 1.5px);
-        background-size: 30px 30px;
-        background-position: 0 0, 15px 15px;
-      }
-      .material-symbols-rounded {
-        font-variation-settings: 'FILL' 1, 'wght' 600, 'GRAD' 0, 'opsz' 40;
-      }
-      .text-outline {
-        text-shadow: 2px 2px 0px rgba(0,0,0,0.1);
-      }
-    </style>
-    <script type="importmap">
-{
-  "imports": {
-    "react": "https://esm.sh/react@18.2.0",
-    "react-dom": "https://esm.sh/react-dom@18.2.0",
-    "react-dom/client": "https://esm.sh/react-dom@18.2.0/client",
-    "@google/genai": "https://esm.sh/@google/genai",
-    "react-dom/": "https://esm.sh/react-dom@^19.2.4/",
-    "react/": "https://esm.sh/react@^19.2.4/"
-  }
-}
-</script>
   </head>
   <body class="bg-cream text-ink antialiased selection:bg-accent selection:text-primary">
     <div id="root"></div>

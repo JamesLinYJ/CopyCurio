@@ -2,7 +2,8 @@
 import React, { useEffect, useState } from 'react';
 import { AppView, NavigationProps } from '../types';
 import { ASSETS } from '../assets';
-import { GoogleGenAI } from "@google/genai";
+import { createOpenAIResponse } from "../utils/openai";
+import { Icon } from '../components/Icon';
 
 const LOADING_TIPS = [
   "正在绘制知识卡片...",
@@ -32,9 +33,6 @@ export const CardPreviewScreen: React.FC<NavigationProps> = ({ navigate }) => {
     setData(null);
 
     try {
-        const apiKey = (typeof process !== 'undefined' && process.env) ? process.env.API_KEY : '';
-        const ai = new GoogleGenAI({ apiKey: apiKey });
-        
         const prompt = `
         为儿童生成一个自然科学知识卡片。
         JSON格式:
@@ -45,15 +43,9 @@ export const CardPreviewScreen: React.FC<NavigationProps> = ({ navigate }) => {
            "keyword": "nature" 
         }
         `;
-        
-        const response = await ai.models.generateContent({
-          model: 'gemini-3-flash-preview',
-          contents: { parts: [{ text: prompt }] },
-          config: { responseMimeType: 'application/json' }
-        });
-        
-        const text = response.text || '{}';
-        const result = JSON.parse(text);
+
+        const text = await createOpenAIResponse(prompt, { temperature: 0.6 });
+        const result = JSON.parse(text || '{}');
         
         // Minimum loading time for visual effect
         await new Promise(r => setTimeout(r, 2000));
@@ -91,7 +83,7 @@ export const CardPreviewScreen: React.FC<NavigationProps> = ({ navigate }) => {
            <div className="h-64 bg-gray-100 relative overflow-hidden">
               <div className="absolute inset-0 bg-gradient-to-tr from-gray-100 via-gray-200 to-gray-100 animate-pulse"></div>
               <div className="absolute inset-0 flex items-center justify-center opacity-30">
-                 <span className="material-symbols-rounded text-6xl text-gray-300 animate-bounce">image</span>
+                 <Icon name="image" className="text-6xl text-gray-300 animate-bounce" />
               </div>
            </div>
            
@@ -136,7 +128,7 @@ export const CardPreviewScreen: React.FC<NavigationProps> = ({ navigate }) => {
                onClick={handleClose}
                className="absolute top-4 right-4 bg-black/30 backdrop-blur-md text-white rounded-full w-8 h-8 flex items-center justify-center border border-white/20 active:scale-90 transition-all hover:bg-black/50"
              >
-               <span className="material-symbols-rounded text-lg">close</span>
+               <Icon name="close" className="text-lg" />
              </button>
           </div>
 
@@ -174,7 +166,7 @@ export const CardPreviewScreen: React.FC<NavigationProps> = ({ navigate }) => {
                    <div className="w-6 h-6 rounded-full bg-green-100 border-2 border-white"></div>
                 </div>
                 <button className="text-xs font-bold text-slate-400 flex items-center gap-1">
-                   <span className="material-symbols-rounded text-sm">favorite</span>
+                   <Icon name="favorite" className="text-sm" />
                    收藏
                 </button>
              </div>

@@ -2,6 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { AppView, NavigationProps } from '../types';
 import { StorageService } from '../utils/storage';
+import { Icon } from '../components/Icon';
 
 export const StorageManagerScreen: React.FC<NavigationProps> = ({ navigate }) => {
   const [breakdown, setBreakdown] = useState({
@@ -58,9 +59,9 @@ export const StorageManagerScreen: React.FC<NavigationProps> = ({ navigate }) =>
 
   return (
     <div className="bg-[#fcfcfc] dark:bg-slate-900 min-h-screen pb-20 font-sans transition-colors duration-500">
-      <header className="sticky top-0 z-50 bg-white/90 dark:bg-slate-900/90 backdrop-blur-md px-6 pt-12 pb-4 border-b border-gray-100 dark:border-gray-800 flex items-center">
+      <header className="sticky top-0 z-50 bg-white/90 dark:bg-slate-900/90 backdrop-blur-md px-6 pt-safe pb-4 border-b border-gray-100 dark:border-gray-800 flex items-center">
         <button onClick={() => navigate(AppView.PROFILE)} className="mr-4 text-slate-400 dark:text-slate-500 active:text-slate-600">
-          <span className="material-symbols-rounded">arrow_back</span>
+          <Icon name="arrow_back" />
         </button>
         <h1 className="text-xl font-bold text-slate-800 dark:text-white">空间管家</h1>
       </header>
@@ -84,7 +85,7 @@ export const StorageManagerScreen: React.FC<NavigationProps> = ({ navigate }) =>
            <div className="h-4 w-full bg-gray-100 dark:bg-slate-700 rounded-full overflow-hidden relative z-10">
               <div className="h-full bg-gradient-to-r from-primary to-orange-400 transition-all duration-1000 ease-out" style={{width: `${percentUsed}%`}}></div>
            </div>
-           <p className="mt-4 text-[10px] text-slate-400 dark:text-slate-500 relative z-10">本地存储状态正常</p>
+           <p className="mt-4 text-[10px] text-slate-400 dark:text-slate-500 relative z-10">后端存储状态正常</p>
 
            {/* Decor */}
            <div className="absolute -right-10 -top-10 w-40 h-40 bg-orange-50 dark:bg-orange-900/10 rounded-full blur-3xl z-0"></div>
@@ -99,7 +100,7 @@ export const StorageManagerScreen: React.FC<NavigationProps> = ({ navigate }) =>
              <div className="flex items-center justify-between p-5">
                 <div className="flex items-center gap-4">
                    <div className="w-10 h-10 rounded-full bg-blue-50 dark:bg-blue-900/20 flex items-center justify-center text-blue-500">
-                     <span className="material-symbols-rounded">forum</span>
+                     <Icon name="forum" />
                    </div>
                    <div>
                       <h4 className="text-sm font-bold text-slate-800 dark:text-white">对话记忆</h4>
@@ -124,7 +125,7 @@ export const StorageManagerScreen: React.FC<NavigationProps> = ({ navigate }) =>
              <div className="flex items-center justify-between p-5">
                 <div className="flex items-center gap-4">
                    <div className="w-10 h-10 rounded-full bg-purple-50 dark:bg-purple-900/20 flex items-center justify-center text-purple-500">
-                     <span className="material-symbols-rounded">image</span>
+                     <Icon name="image" />
                    </div>
                    <div>
                       <h4 className="text-sm font-bold text-slate-800 dark:text-white">媒体缓存</h4>
@@ -146,7 +147,7 @@ export const StorageManagerScreen: React.FC<NavigationProps> = ({ navigate }) =>
              <div className="flex items-center justify-between p-5">
                 <div className="flex items-center gap-4">
                    <div className="w-10 h-10 rounded-full bg-gray-50 dark:bg-gray-700 flex items-center justify-center text-gray-400">
-                     <span className="material-symbols-rounded">settings</span>
+                     <Icon name="settings" />
                    </div>
                    <div>
                       <h4 className="text-sm font-bold text-slate-800 dark:text-white">系统配置</h4>
@@ -164,7 +165,7 @@ export const StorageManagerScreen: React.FC<NavigationProps> = ({ navigate }) =>
              onClick={handleFactoryReset}
              className="w-full py-4 rounded-[2rem] border border-red-100 dark:border-red-900/30 bg-red-50 dark:bg-red-900/10 text-red-500 font-bold text-sm active:scale-95 transition-all flex items-center justify-center gap-2 hover:bg-red-100 dark:hover:bg-red-900/20"
            >
-             <span className="material-symbols-rounded text-[18px]">delete_forever</span>
+             <Icon name="delete_forever" className="text-[18px]" />
              恢复出厂设置 (清除所有数据)
            </button>
         </div>

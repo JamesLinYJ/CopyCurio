@@ -3,6 +3,7 @@ import React, { useEffect, useState } from 'react';
 import { AppView, NavigationProps, LibraryItem } from '../types';
 import { ASSETS } from '../assets';
 import { StorageService } from '../utils/storage';
+import { Icon } from '../components/Icon';
 
 export const LibraryScreen: React.FC<NavigationProps> = ({ navigate }) => {
   const [items, setItems] = useState<LibraryItem[]>([]);
@@ -18,6 +19,15 @@ export const LibraryScreen: React.FC<NavigationProps> = ({ navigate }) => {
       }
     };
     fetchLibrary();
+
+    const handleSync = (event: Event) => {
+      const key = (event as CustomEvent).detail?.key;
+      if (!key || key === 'library') {
+        void fetchLibrary();
+      }
+    };
+    window.addEventListener('storage-sync', handleSync);
+    return () => window.removeEventListener('storage-sync', handleSync);
   }, []);
 
   const handleDelete = async (e: React.MouseEvent, id: string) => {
@@ -31,7 +41,7 @@ export const LibraryScreen: React.FC<NavigationProps> = ({ navigate }) => {
 
   return (
     <div className="bg-[#f8f9fa] min-h-[100dvh] w-full pb-28 font-display text-slate-900">
-      <header className="sticky top-0 z-30 bg-[#f8f9fa]/90 backdrop-blur-md px-5 pt-12 pb-4 flex justify-between items-center">
+      <header className="sticky top-0 z-30 bg-[#f8f9fa]/90 backdrop-blur-md px-5 pt-safe pb-4 flex justify-between items-center">
         <h1 className="text-2xl font-black text-slate-900">我的收藏</h1>
         <span className="text-sm font-bold text-gray-400">{items.length} 项</span>
       </header>
@@ -40,7 +50,7 @@ export const LibraryScreen: React.FC<NavigationProps> = ({ navigate }) => {
         {items.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-24 opacity-60">
             <div className="w-20 h-20 bg-gray-100 rounded-full flex items-center justify-center mb-4 text-gray-400">
-              <span className="material-symbols-rounded text-4xl">bookmarks</span>
+              <Icon name="bookmarks" className="text-4xl" />
             </div>
             <p className="text-sm font-bold text-gray-500">这里空空如也</p>
             <p className="text-xs text-gray-400 mt-1">去探索并收藏一些内容吧</p>
@@ -63,7 +73,7 @@ export const LibraryScreen: React.FC<NavigationProps> = ({ navigate }) => {
                  <div className="mt-auto px-1 pt-2 flex justify-between items-center opacity-60">
                    <span className="text-[10px] text-gray-500">{new Date(item.date).toLocaleDateString()}</span>
                    <button onClick={(e) => handleDelete(e, item.id)}>
-                     <span className="material-symbols-rounded text-[16px]">delete</span>
+                     <Icon name="delete" className="text-[16px]" />
                    </button>
                  </div>
                </article>
@@ -82,7 +92,7 @@ export const LibraryScreen: React.FC<NavigationProps> = ({ navigate }) => {
                 onClick={() => setSelectedItem(null)}
                 className="absolute top-4 right-4 w-8 h-8 bg-black/30 backdrop-blur-md rounded-full text-white flex items-center justify-center hover:bg-black/50"
               >
-                <span className="material-symbols-rounded text-sm">close</span>
+                <Icon name="close" className="text-sm" />
               </button>
             </div>
             <div className="p-6">

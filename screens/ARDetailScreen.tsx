@@ -2,6 +2,7 @@
 import React, { useState } from 'react';
 import { AppView, NavigationProps } from '../types';
 import { ASSETS } from '../assets';
+import { Icon } from '../components/Icon';
 
 export const ARDetailScreen: React.FC<NavigationProps> = ({ navigate }) => {
   const [mode, setMode] = useState<'simple' | 'geek'>('simple');
@@ -15,16 +16,16 @@ export const ARDetailScreen: React.FC<NavigationProps> = ({ navigate }) => {
       </div>
 
       {/* Top Controls */}
-      <div className="absolute top-0 left-0 w-full z-10 pt-12 pb-4 px-6 flex justify-between items-start pointer-events-none">
+      <div className="absolute top-0 left-0 w-full z-10 pt-safe pb-4 px-6 flex justify-between items-start pointer-events-none">
         <div className="flex items-center gap-2 pointer-events-auto">
           <div className="h-8 px-3 bg-black/20 backdrop-blur-md rounded-full flex items-center gap-2 text-white border border-white/10">
-            <span className="material-symbols-rounded text-[18px]">view_in_ar</span>
+            <Icon name="view_in_ar" className="text-[18px]" />
             <span className="text-xs font-medium tracking-wide">AR 探索者</span>
           </div>
         </div>
         <div className="flex flex-col gap-4 pointer-events-auto">
           <button className="flex items-center justify-center rounded-full size-10 bg-black/20 backdrop-blur-md text-white border border-white/10 hover:bg-black/30">
-            <span className="material-symbols-rounded text-[20px]">more_vert</span>
+            <Icon name="more_vert" className="text-[20px]" />
           </button>
         </div>
       </div>
@@ -62,7 +63,7 @@ export const ARDetailScreen: React.FC<NavigationProps> = ({ navigate }) => {
               </div>
 
               <button className="group relative w-full h-12 flex items-center justify-center gap-2 bg-[#f2cc0d] hover:bg-yellow-400 text-gray-900 rounded-full font-bold text-base shadow-[0_4px_14px_0_rgba(242,204,13,0.39)] transition-all active:scale-[0.98]">
-                <span className="material-symbols-rounded text-[20px] transition-transform group-hover:rotate-12">science</span>
+                <Icon name="science" className="text-[20px] transition-transform group-hover:rotate-12" />
                 <span>验证概念</span>
                 <span className="absolute right-4 opacity-0 group-hover:opacity-100 transition-opacity text-xs font-normal bg-black/10 px-2 py-0.5 rounded-full">AR</span>
               </button>
@@ -73,7 +74,7 @@ export const ARDetailScreen: React.FC<NavigationProps> = ({ navigate }) => {
         {/* Close */}
         <div className="mt-6 flex justify-center">
           <button onClick={() => navigate(AppView.AR_SCAN)} className="flex items-center justify-center size-12 rounded-full bg-white/90 dark:bg-black/60 backdrop-blur text-gray-800 dark:text-white shadow-lg hover:bg-white transition-all active:scale-90 border border-white/20">
-            <span className="material-symbols-rounded text-[24px]">close</span>
+            <Icon name="close" className="text-[24px]" />
           </button>
         </div>
       </div>

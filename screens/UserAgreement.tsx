@@ -1,13 +1,14 @@
 
 import React from 'react';
 import { AppView, NavigationProps } from '../types';
+import { Icon } from '../components/Icon';
 
 export const UserAgreement: React.FC<NavigationProps> = ({ navigate }) => {
   return (
     <div className="bg-white dark:bg-slate-900 min-h-screen font-sans transition-colors duration-500">
-      <header className="sticky top-0 z-50 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md px-6 pt-12 pb-4 border-b border-gray-100 dark:border-gray-800 flex items-center shadow-sm">
+      <header className="sticky top-0 z-50 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md px-6 pt-safe pb-4 border-b border-gray-100 dark:border-gray-800 flex items-center shadow-sm">
         <button onClick={() => navigate(AppView.PROFILE)} className="mr-4 text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-white transition-colors">
-          <span className="material-symbols-rounded">arrow_back</span>
+          <Icon name="arrow_back" />
         </button>
         <h1 className="text-lg font-bold text-slate-900 dark:text-white">用户服务协议</h1>
       </header>

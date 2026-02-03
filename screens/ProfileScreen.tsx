@@ -2,20 +2,35 @@
 import React, { useEffect, useState } from 'react';
 import { AppView, NavigationProps, UserStats } from '../types';
 import { ASSETS } from '../assets';
-import { StorageService } from '../utils/storage';
+import { StorageService, DEFAULT_STATS } from '../utils/storage';
+import { Icon } from '../components/Icon';
 
 export const ProfileScreen: React.FC<NavigationProps> = ({ navigate }) => {
-  const [stats, setStats] = useState<UserStats | null>(null);
+  const [stats, setStats] = useState<UserStats | null>(DEFAULT_STATS);
 
   // Function to refresh data, called on mount and when needed
-  const loadData = () => {
-    setStats(StorageService.getStats());
+  const loadData = async () => {
+    const data = await StorageService.getStats();
+    setStats(data);
   };
 
   useEffect(() => {
-    loadData();
-    window.addEventListener('storage', loadData);
-    return () => window.removeEventListener('storage', loadData);
+    void loadData();
+    const handleStorage = () => {
+      void loadData();
+    };
+    const handleSync = (event: Event) => {
+      const key = (event as CustomEvent).detail?.key;
+      if (!key || key === 'stats' || key === 'library') {
+        void loadData();
+      }
+    };
+    window.addEventListener('storage', handleStorage);
+    window.addEventListener('storage-sync', handleSync);
+    return () => {
+      window.removeEventListener('storage', handleStorage);
+      window.removeEventListener('storage-sync', handleSync);
+    };
   }, []);
 
   const xp = stats?.xp || 0;
@@ -30,7 +45,7 @@ export const ProfileScreen: React.FC<NavigationProps> = ({ navigate }) => {
     <div className="bg-[#fcfcfc] min-h-[100dvh] w-full pb-32 font-sans text-slate-900 overflow-x-hidden">
       
       {/* 1. Header: "个人中心" on left, "close" text on right */}
-      <header className="sticky top-0 z-30 bg-[#fcfcfc]/95 backdrop-blur-sm px-6 pt-12 pb-4 flex justify-between items-center">
+      <header className="sticky top-0 z-30 bg-[#fcfcfc]/95 backdrop-blur-sm px-6 pt-safe pb-4 flex justify-between items-center">
         <h1 className="text-2xl font-black text-slate-900 tracking-tight">个人中心</h1>
         <button 
           onClick={() => navigate(AppView.HOME)} 
@@ -138,7 +153,7 @@ const AchievementCard = ({icon, title, desc, progress, percent, isActive}: any) 
   <div className="bg-white p-5 rounded-[1.8rem] flex flex-col gap-3 border border-gray-50 shadow-sm relative overflow-hidden group">
      {/* Icon */}
      <div className="text-slate-300 group-hover:text-primary transition-colors">
-        <span className="material-symbols-rounded text-3xl">{icon}</span>
+        <Icon name={icon} className="text-3xl" />
      </div>
      
      {/* Texts */}
@@ -160,9 +175,9 @@ const AchievementCard = ({icon, title, desc, progress, percent, isActive}: any) 
 const MenuRow = ({icon, label, onClick}: any) => (
   <div onClick={onClick} className="flex items-center justify-between p-5 hover:bg-gray-50 transition-colors cursor-pointer group active:bg-gray-100">
      <div className="flex items-center gap-4">
-       <span className="material-symbols-rounded text-slate-300 group-hover:text-primary transition-colors">{icon}</span>
+       <Icon name={icon} className="text-slate-300 group-hover:text-primary transition-colors" />
        <span className="text-sm font-bold text-slate-700">{label}</span>
      </div>
-     <span className="material-symbols-rounded text-slate-200 text-[18px]">chevron_right</span>
+     <Icon name="chevron_right" className="text-slate-200 text-[18px]" />
   </div>
 );

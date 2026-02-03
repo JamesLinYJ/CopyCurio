@@ -2,8 +2,9 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { AppView, NavigationProps } from '../types';
 import { ASSETS } from '../assets';
-import { GoogleGenAI } from "@google/genai";
+import { buildImageInput, buildTextInput, createOpenAIResponse, OpenAIInputItem } from "../utils/openai";
 import { StorageService } from '../utils/storage';
+import { Icon } from '../components/Icon';
 
 interface ScanAttribute {
   label: string;
@@ -105,7 +106,6 @@ export const ARScanScreen: React.FC<NavigationProps> = ({ navigate }) => {
     if (navigator.vibrate) navigator.vibrate([20]);
 
     try {
-      const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
       // Structured Prompt for rich data
       const prompt = `
         Analyze this image meticulously. Identify the main subject (plant, animal, object, landmark, etc.).
@@ -124,22 +124,23 @@ export const ARScanScreen: React.FC<NavigationProps> = ({ navigate }) => {
           "relatedQuestions": ["Q1?", "Q2?"] (2 deep-dive questions)
         }
       `;
-      
-      const response = await ai.models.generateContent({
-         model: 'gemini-3-flash-preview', 
-         contents: { 
-           parts: [
-             { inlineData: { mimeType: 'image/jpeg', data: base64 } }, 
-             { text: prompt }
-           ] 
-         },
-         config: { responseMimeType: 'application/json' }
-      });
-      
+
+      const input: OpenAIInputItem[] = [
+        {
+          role: "user",
+          content: [
+            buildTextInput(prompt),
+            buildImageInput(`data:image/jpeg;base64,${base64}`),
+          ],
+        },
+      ];
+
+      const responseText = await createOpenAIResponse(input, { temperature: 0.4 });
+
       clearInterval(processInterval);
       setProcessText(PROCESS_STEPS[PROCESS_STEPS.length - 1]);
 
-      let text = response.text || '{}';
+      let text = responseText || '{}';
       // Strip markdown code blocks if present
       text = text.replace(/```json/g, '').replace(/```/g, '').trim();
 
@@ -272,16 +273,16 @@ export const ARScanScreen: React.FC<NavigationProps> = ({ navigate }) => {
          {/* Permission Error State */}
          {hasCameraPermission === false && (
            <div className="absolute inset-0 z-20 flex flex-col items-center justify-center bg-gray-900 text-white p-8 text-center">
-              <span className="material-symbols-rounded text-4xl mb-4 text-gray-500">no_photography</span>
+              <Icon name="no_photography" className="text-4xl mb-4 text-gray-500" />
               <p className="font-bold">无法访问相机</p>
               <p className="text-sm text-gray-400 mt-2">请在App设置中允许访问，或使用相册导入。</p>
            </div>
          )}
          
          {/* Top Bar */}
-         <div className="absolute top-0 w-full pt-12 px-5 flex justify-between items-center z-30 bg-gradient-to-b from-black/80 to-transparent pb-12">
+         <div className="absolute top-0 w-full pt-safe px-5 flex justify-between items-center z-30 bg-gradient-to-b from-black/80 to-transparent pb-12">
            <button onClick={() => navigate(AppView.HOME)} className="w-10 h-10 rounded-full bg-black/20 backdrop-blur-md text-white border border-white/10 flex items-center justify-center active:scale-90 transition-transform">
-             <span className="material-symbols-rounded text-[22px]">close</span>
+             <Icon name="close" className="text-[22px]" />
            </button>
            
            <div className="bg-black/20 backdrop-blur-md px-4 py-1.5 rounded-full border border-white/10 flex items-center gap-2">
@@ -293,7 +294,7 @@ export const ARScanScreen: React.FC<NavigationProps> = ({ navigate }) => {
              onClick={() => setFacingMode(prev => prev === 'environment' ? 'user' : 'environment')}
              className="w-10 h-10 rounded-full bg-black/20 backdrop-blur-md text-white border border-white/10 flex items-center justify-center active:scale-90 transition-transform"
            >
-             <span className="material-symbols-rounded text-[20px]">flip_camera_ios</span>
+             <Icon name="flip_camera_ios" className="text-[20px]" />
            </button>
          </div>
 
@@ -322,7 +323,7 @@ export const ARScanScreen: React.FC<NavigationProps> = ({ navigate }) => {
                 {/* Center Icon Pulse */}
                 <div className="absolute inset-0 flex items-center justify-center">
                    <div className="w-24 h-24 bg-secondary/20 rounded-full flex items-center justify-center backdrop-blur-sm border border-secondary/50 shadow-[0_0_30px_rgba(78,205,196,0.4)] animate-pulse">
-                      <span className="material-symbols-rounded text-white text-4xl">view_in_ar</span>
+                      <Icon name="view_in_ar" className="text-white text-4xl" />
                    </div>
                 </div>
              </div>
@@ -364,7 +365,7 @@ export const ARScanScreen: React.FC<NavigationProps> = ({ navigate }) => {
             {/* Gallery */}
             <button onClick={() => fileInputRef.current?.click()} className="flex flex-col items-center gap-2 group active:scale-95 transition-transform w-16">
                <div className="w-10 h-10 rounded-full bg-white/10 border border-white/20 flex items-center justify-center group-hover:bg-white/20 transition-colors">
-                 <span className="material-symbols-rounded text-white text-[20px]">photo_library</span>
+                 <Icon name="photo_library" className="text-white text-[20px]" />
                </div>
                <span className="text-[10px] text-gray-400 font-bold">导入</span>
             </button>
@@ -382,7 +383,7 @@ export const ARScanScreen: React.FC<NavigationProps> = ({ navigate }) => {
             {/* History */}
             <button onClick={() => navigate(AppView.LIBRARY)} className="flex flex-col items-center gap-2 group active:scale-95 transition-transform w-16">
                <div className="w-10 h-10 rounded-full bg-white/10 border border-white/20 flex items-center justify-center group-hover:bg-white/20 transition-colors">
-                 <span className="material-symbols-rounded text-white text-[20px]">history</span>
+                 <Icon name="history" className="text-white text-[20px]" />
                </div>
                <span className="text-[10px] text-gray-400 font-bold">历史</span>
             </button>
@@ -395,7 +396,7 @@ export const ARScanScreen: React.FC<NavigationProps> = ({ navigate }) => {
             {/* Floating Action Button (Close) */}
             <div className="absolute -top-16 right-4 z-50">
                <button onClick={resetScanner} className="w-12 h-12 bg-black/50 backdrop-blur-md border border-white/20 rounded-full text-white flex items-center justify-center shadow-lg active:scale-90 transition-transform">
-                  <span className="material-symbols-rounded">refresh</span>
+                  <Icon name="refresh" />
                </button>
             </div>
 
@@ -436,11 +437,11 @@ export const ARScanScreen: React.FC<NavigationProps> = ({ navigate }) => {
                    {/* Fun Fact */}
                    <div className="bg-gradient-to-br from-[#195de6] to-[#60a5fa] p-5 rounded-2xl text-white shadow-lg shadow-blue-500/20 mb-6 relative overflow-hidden">
                       <div className="absolute -right-4 -bottom-4 opacity-10">
-                         <span className="material-symbols-rounded text-[100px]">auto_awesome</span>
+                         <Icon name="auto_awesome" className="text-[100px]" />
                       </div>
                       <div className="relative z-10">
                         <div className="flex items-center gap-2 mb-2 opacity-80">
-                           <span className="material-symbols-rounded text-sm">lightbulb</span>
+                           <Icon name="lightbulb" className="text-sm" />
                            <span className="text-[10px] font-bold uppercase tracking-widest">知识拓展</span>
                         </div>
                         <p className="text-sm font-bold leading-relaxed">{result.funFact}</p>
@@ -454,7 +455,7 @@ export const ARScanScreen: React.FC<NavigationProps> = ({ navigate }) => {
                              onClick={resetScanner}
                              className="w-full h-12 rounded-xl bg-slate-900 text-white font-bold text-sm flex items-center justify-center gap-2 shadow-lg active:scale-95 transition-transform"
                            >
-                             <span className="material-symbols-rounded">refresh</span>
+                             <Icon name="refresh" />
                              重新识别
                            </button>
                        </div>
@@ -466,11 +467,11 @@ export const ARScanScreen: React.FC<NavigationProps> = ({ navigate }) => {
                             className={`flex-1 h-12 rounded-xl font-bold text-sm flex items-center justify-center gap-2 transition-all active:scale-95
                             ${isSaved ? 'bg-emerald-50 text-emerald-600 border border-emerald-200' : 'bg-ink text-white shadow-lg'}`}
                           >
-                            <span className="material-symbols-rounded text-[18px]">{isSaved ? 'check_circle' : 'bookmark'}</span>
+                            <Icon name={isSaved ? 'check_circle' : 'bookmark'} className="text-[18px]" />
                             {isSaved ? '已归档' : '存入知识库'}
                           </button>
                           <button className="h-12 w-12 rounded-xl border border-gray-200 flex items-center justify-center text-slate-600 active:bg-gray-50">
-                            <span className="material-symbols-rounded">share</span>
+                            <Icon name="share" />
                           </button>
                        </div>
                    )}

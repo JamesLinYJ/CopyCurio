@@ -13,9 +13,12 @@ import { ThemeSettingsScreen } from './screens/ThemeSettingsScreen';
 import { NotificationSettingsScreen } from './screens/NotificationSettingsScreen';
 import { StorageManagerScreen } from './screens/StorageManagerScreen';
 import { BottomNav } from './components/BottomNav';
+import { Icon } from './components/Icon';
 import { AppView } from './types';
 import { ASSETS } from './assets';
 import { StorageService } from './utils/storage';
+import { Capacitor } from '@capacitor/core';
+import { StatusBar, Style } from '@capacitor/status-bar';
 
 interface ErrorBoundaryProps {
   children: React.ReactNode;
@@ -46,7 +49,7 @@ class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoundarySta
       return (
         <div className="flex flex-col items-center justify-center min-h-screen p-8 text-center bg-gray-50 text-slate-900">
            <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mb-6">
-             <span className="material-symbols-outlined text-3xl text-red-500">error_outline</span>
+             <Icon name="error_outline" className="text-3xl text-red-500" />
            </div>
            <h2 className="text-xl font-bold text-slate-900 mb-2">应用遇到了一点问题</h2>
            <p className="text-sm text-slate-500 mb-8 max-w-xs mx-auto leading-relaxed">
@@ -75,25 +78,42 @@ class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoundarySta
 const App: React.FC = () => {
   const [currentView, setCurrentView] = useState<AppView>(AppView.HOME);
   const [isInitializing, setIsInitializing] = useState(true);
+  const [isDarkTheme, setIsDarkTheme] = useState(false);
+
+  const updateStatusBar = (isDark: boolean) => {
+    if (Capacitor.getPlatform() === 'web') return;
+    const darkHeaderViews = new Set([AppView.AR_SCAN, AppView.AR_DETAIL]);
+    const useLightStatus = isDark || darkHeaderViews.has(currentView);
+    StatusBar.setOverlaysWebView({ overlay: true }).catch(() => {});
+    StatusBar.show().catch(() => {});
+    StatusBar.setStyle({ style: useLightStatus ? Style.Light : Style.Dark }).catch(() => {});
+  };
 
   // Global Theme & Accessibility Manager
   useEffect(() => {
-    const applySettings = () => {
-      const settings = StorageService.getSettings();
+    let cancelled = false;
+
+    const applySettings = async () => {
+      const settings = await StorageService.getSettings();
+      if (cancelled) return;
       const root = document.documentElement;
-      
+
       // Theme
       root.classList.remove('dark', 'ink-mode');
       root.style.removeProperty('--bg-color');
-      
+
+      let isDark = false;
+
       if (settings.theme === 'dark') {
         root.classList.add('dark');
+        isDark = true;
       } else if (settings.theme === 'ink') {
         root.classList.add('ink-mode');
         root.style.setProperty('--bg-color', '#f2efe6');
       } else if (settings.theme === 'system') {
          if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
            root.classList.add('dark');
+           isDark = true;
          }
       }
 
@@ -114,25 +134,34 @@ const App: React.FC = () => {
         root.style.scrollBehavior = 'smooth';
         document.body.classList.remove('motion-reduce');
       }
+
+      setIsDarkTheme(isDark);
+      updateStatusBar(isDark);
     };
 
-    applySettings();
-    window.addEventListener('storage', applySettings);
-    return () => window.removeEventListener('storage', applySettings);
+    const handleStorage = () => {
+      void applySettings();
+    };
+
+    void applySettings();
+    window.addEventListener('storage', handleStorage);
+    return () => {
+      cancelled = true;
+      window.removeEventListener('storage', handleStorage);
+    };
   }, []);
 
   useEffect(() => {
-    const preload = async () => {
-      const images = [ASSETS.avatar_user, ASSETS.avatar_bot, ASSETS.bg_sky];
-      await Promise.all(images.map(src => new Promise((resolve) => {
-        const img = new Image();
-        img.src = src;
-        img.onload = resolve;
-        img.onerror = resolve; // Continue even if image fails
-      })));
-      setTimeout(() => setIsInitializing(false), 1500);
-    };
-    preload();
+    updateStatusBar(isDarkTheme);
+  }, [currentView, isDarkTheme]);
+
+  useEffect(() => {
+    setIsInitializing(false);
+    const images = [ASSETS.avatar_user, ASSETS.avatar_bot, ASSETS.bg_sky];
+    images.forEach(src => {
+      const img = new Image();
+      img.src = src;
+    });
   }, []);
 
   const navigate = (view: AppView) => {
@@ -145,7 +174,7 @@ const App: React.FC = () => {
       <div className="fixed inset-0 bg-ink z-[100] flex flex-col items-center justify-center">
         <div className="relative">
           <div className="w-20 h-20 rounded-[1.8rem] bg-gradient-to-br from-primary to-accent animate-pulse flex items-center justify-center shadow-xl">
-             <span className="material-symbols-outlined text-white text-[40px] font-variation-filled">explore</span>
+             <Icon name="explore" className="text-white text-[40px]" />
           </div>
         </div>
         <h1 className="mt-6 text-white font-bold text-2xl tracking-widest">万象解惑</h1>
