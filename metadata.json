@@ -1,0 +1,8 @@
+{
+  "name": "Copy of Curio: AI 探索世界",
+  "description": "一款沉浸式 AI 知识探索应用，具有 AR 扫描、深度对话和游戏化知识库功能。",
+  "requestFramePermissions": [
+    "camera",
+    "microphone"
+  ]
+}
